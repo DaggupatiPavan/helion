@@ -1,0 +1,59 @@
+name: Build-Helion-Curl-Boost
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout your fork (Helion repo)
+    - name: Checkout Fork
+      uses: actions/checkout@v4
+
+    # 2. Install dependencies
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y curl libboost-all-dev cmake python3 python3-pip build-essential git
+
+    # 3. Build Helion from your repo
+    - name: Build Helion
+      run: |
+        pip install -r requirements.txt
+        python setup.py build_ext --inplace
+
+    # 4. OPTIONAL: Build your C++ + Boost project (if needed)
+    - name: Build C++ using Boost
+      run: |
+        mkdir -p build
+        cd build
+        cmake ..
+        make -j4 || true      # optional if you don't have C++ code
+
+    # 5. Scan using Trivy
+    - name: Trivy FS Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: fs
+        scan-ref: .
+
+    # 6. Upload to Nexus repository
+    - name: Upload to Nexus
+      if: always()
+      run: |
+        curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASS }} \
+        --upload-file build/output_binary \
+        https://your-nexus-url/repository/releases/output_binary
+
+    # 7. Upload final artifact
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: final-artifact
+        path: |
+          build/
+          helion/
