@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60   # ensure session doesn't auto-stop
 
     steps:
     # 1. Checkout your fork of Helion
@@ -46,19 +47,18 @@ jobs:
         source .venv/bin/activate
         pip install -e .'[dev]'
 
-    # 7. Install pre-commit hooks
-    - name: Install pre-commit
+    # 7. Install pre-commit + pyrefly
+    - name: Install pre-commit and pyrefly
       run: |
         source .venv/bin/activate
-        pip install pre-commit
-        pip install pyrefly
+        pip install pre-commit pyrefly
         pre-commit install
 
-    # 8. Run lint checks (ruff, pyrefly, etc.)
-    - name: Run pre-commit checks
-      run: |
-        source .venv/bin/activate
-        #pre-commit run --all-files
+    # 8. 🔍 Add tmate debug session
+    - name: Start tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true   # only you can connect
 
     # 9. Security scan (Trivy)
     - name: Trivy File System Scan
@@ -66,23 +66,3 @@ jobs:
       with:
         scan-type: fs
         scan-ref: .
-
-    # 10. Package the artifact
-    - name: Create artifact package
-      run: |
-        tar -czf helion-artifact.tar.gz .venv/ helion/ setup.py pyproject.toml
-
-    # 11. Upload artifact to GitHub
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: helion-artifact
-        path: helion-artifact.tar.gz
-
-    # 12. Upload artifact to Nexus (optional)
-    - name: Upload to Nexus
-      if: always()
-      run: |
-        curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASS }} \
-        --upload-file helion-artifact.tar.gz \
-        https://your-nexus-url/repository/releases/helion-artifact.tar.gz
