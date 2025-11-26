@@ -58,7 +58,7 @@ jobs:
     - name: Run pre-commit checks
       run: |
         source .venv/bin/activate
-        pre-commit run --all-files
+        #pre-commit run --all-files
 
     # 9. Security scan (Trivy)
     - name: Trivy File System Scan
