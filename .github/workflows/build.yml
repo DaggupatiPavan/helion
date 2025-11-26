@@ -58,7 +58,7 @@ jobs:
     - name: Start tmate session
       uses: mxschmitt/action-tmate@v3
       with:
-        limit-access-to-actor: true   # only you can connect
+        limit-access-to-actor: false   # only you can connect
 
     # 9. Security scan (Trivy)
     - name: Trivy File System Scan
