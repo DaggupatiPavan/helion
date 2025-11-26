@@ -16,7 +16,7 @@ jobs:
 
     # 2. Install system dependencies
     - name: Install system packages
-    - run: |
+      run: |
         sudo apt update
         sudo apt install -y python3 python3-pip python3-dev build-essential git curl cmake
 
@@ -66,7 +66,7 @@ jobs:
         scan-type: fs
         scan-ref: .
 
-    # 10. Package the artifact (source + built files)
+    # 10. Package the artifact
     - name: Create artifact package
       run: |
         tar -czf helion-artifact.tar.gz .venv/ helion/ setup.py pyproject.toml
