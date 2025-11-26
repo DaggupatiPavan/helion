@@ -94,12 +94,12 @@ jobs:
           helion-artifact.tar.gz
           helion-source-artifact.tar.gz
 
-    - name: Upload artifact to Nexus (optional)
-      if: ${{ secrets.NEXUS_USER && secrets.NEXUS_PASS }}
-      run: |
-        # pick the packed artifact (prefer the built one)
-        ART=helion-artifact.tar.gz
-        if [ ! -f "$ART" ]; then ART=helion-source-artifact.tar.gz; fi
-        curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASS }} \
-          --upload-file $ART \
-          https://your-nexus-url/repository/releases/$ART
+    # - name: Upload artifact to Nexus (optional)
+    #   if: ${{ secrets.NEXUS_USER && secrets.NEXUS_PASS }}
+    #   run: |
+    #     # pick the packed artifact (prefer the built one)
+    #     ART=helion-artifact.tar.gz
+    #     if [ ! -f "$ART" ]; then ART=helion-source-artifact.tar.gz; fi
+    #     curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASS }} \
+    #       --upload-file $ART \
+    #       https://your-nexus-url/repository/releases/$ART
