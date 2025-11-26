@@ -1,4 +1,4 @@
-name: Build-Helion-Curl-Boost
+name: Helion build
 
 on:
   push:
@@ -10,50 +10,78 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout your fork (Helion repo)
-    - name: Checkout Fork
+    # 1. Checkout your fork of Helion
+    - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 2. Install dependencies
-    - name: Install Dependencies
-      run: |
+    # 2. Install system dependencies
+    - name: Install system packages
+    - run: |
         sudo apt update
-        sudo apt install -y curl libboost-all-dev cmake python3 python3-pip build-essential git
+        sudo apt install -y python3 python3-pip python3-dev build-essential git curl cmake
 
-    # 3. Build Helion from your repo
-    - name: Build Helion
+    # 3. Install uv (Recommended for Helion)
+    - name: Install uv
       run: |
-        pip install -r requirements.txt
-        python setup.py build_ext --inplace
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    # 4. OPTIONAL: Build your C++ + Boost project (if needed)
-    - name: Build C++ using Boost
+    # 4. Create UV virtual environment
+    - name: Create uv virtual environment
       run: |
-        mkdir -p build
-        cd build
-        cmake ..
-        make -j4 || true      # optional if you don't have C++ code
+        uv venv .venv
+        source .venv/bin/activate
 
-    # 5. Scan using Trivy
-    - name: Trivy FS Scan
+    # 5. Install PyTorch 2.9+ and Triton 3.5+
+    - name: Install PyTorch + Triton
+      run: |
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install torch --index-url https://download.pytorch.org/whl/cu124
+        pip install triton==3.5.0
+
+    # 6. Install Helion in editable dev mode
+    - name: Install Helion (editable)
+      run: |
+        source .venv/bin/activate
+        pip install -e .'[dev]'
+
+    # 7. Install pre-commit hooks
+    - name: Install pre-commit
+      run: |
+        source .venv/bin/activate
+        pip install pre-commit
+        pre-commit install
+
+    # 8. Run lint checks (ruff, pyrefly, etc.)
+    - name: Run pre-commit checks
+      run: |
+        source .venv/bin/activate
+        pre-commit run --all-files
+
+    # 9. Security scan (Trivy)
+    - name: Trivy File System Scan
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: fs
         scan-ref: .
 
-    # 6. Upload to Nexus repository
+    # 10. Package the artifact (source + built files)
+    - name: Create artifact package
+      run: |
+        tar -czf helion-artifact.tar.gz .venv/ helion/ setup.py pyproject.toml
+
+    # 11. Upload artifact to GitHub
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: helion-artifact
+        path: helion-artifact.tar.gz
+
+    # 12. Upload artifact to Nexus (optional)
     - name: Upload to Nexus
       if: always()
       run: |
         curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASS }} \
-        --upload-file build/output_binary \
-        https://your-nexus-url/repository/releases/output_binary
-
-    # 7. Upload final artifact
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: final-artifact
-        path: |
-          build/
-          helion/
+        --upload-file helion-artifact.tar.gz \
+        https://your-nexus-url/repository/releases/helion-artifact.tar.gz
